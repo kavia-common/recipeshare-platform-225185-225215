@@ -84,7 +84,7 @@ export default function RecipeDetail() {
     <div className="container" style={{ padding: "24px 0 48px" }}>
       <h2 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <span>{recipe.title}</span>
-        <span style={{ fontSize: 14, color: "#6b7280" }}>by {recipe.authorName || "Unknown"}</span>
+        <span style={{ fontSize: 14, color: "#6b7280" }}>by {recipe.authorName || recipe.author?.name || "Unknown"}</span>
       </h2>
       <div className="detail">
         <div>
