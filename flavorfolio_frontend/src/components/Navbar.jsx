@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 /** Navbar with brand, links, a compact search for small screens, and auth buttons. */
 export default function Navbar() {
-  const { user, login, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [q, setQ] = useState("");
   const nav = useNavigate();
 
@@ -38,7 +38,7 @@ export default function Navbar() {
           {user && <NavLink to="/create" className="btn btn-primary">Create</NavLink>}
           {user && <NavLink to="/profile" className="btn">Profile</NavLink>}
           {!user ? (
-            <button onClick={() => login()} className="btn btn-emerald" aria-label="Sign in">
+            <button onClick={() => nav("/signin")} className="btn btn-emerald" aria-label="Sign in">
               Sign in
             </button>
           ) : (

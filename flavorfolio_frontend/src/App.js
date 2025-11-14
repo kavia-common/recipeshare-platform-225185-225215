@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import "./theme.css";
 import Layout from "./components/Layout";
@@ -11,12 +11,20 @@ import Profile from "./pages/Profile";
 import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./pages/ErrorBoundary";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import SignIn from "./pages/SignIn";
 
 /**
  * App configures routing and global providers, and wraps content in Layout.
  * It follows a Next.js-style structure using pages directory and server-like data access.
  */
+function RedirectIfAuthed({ children }) {
+  const { user, initializing } = useAuth();
+  if (initializing) return children;
+  if (user) return <Navigate to="/" replace />;
+  return children;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -30,6 +38,14 @@ function App() {
               <Route path="/edit/:id" element={<EditRecipe />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/search" element={<Search />} />
+              <Route
+                path="/signin"
+                element={
+                  <RedirectIfAuthed>
+                    <SignIn />
+                  </RedirectIfAuthed>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>
