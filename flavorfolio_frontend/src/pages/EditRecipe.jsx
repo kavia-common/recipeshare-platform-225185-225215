@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
-import { getRecipe, updateRecipe } from "../lib/api";
+import api, { mockAPI } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -34,7 +34,7 @@ export default function EditRecipe() {
       setLoading(true);
       setErr("");
       try {
-        const r = await getRecipe(id);
+        const r = await mockAPI.recipes.getById(id);
         if (!r) {
           setErr("Recipe not found.");
         } else {
@@ -84,7 +84,7 @@ export default function EditRecipe() {
         ingredients: values.ingredients.split("\n").map(s => s.trim()).filter(Boolean),
         instructions: values.instructions.trim(),
       };
-      await updateRecipe(id, payload, user);
+      await mockAPI.recipes.update(id, payload);
       nav(`/recipes/${id}`);
     } catch (e) {
       setErr(e?.message || "Failed to save changes.");
