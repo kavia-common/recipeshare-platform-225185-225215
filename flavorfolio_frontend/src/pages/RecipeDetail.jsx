@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import api, { mockAPI } from "../lib/api";
+import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 /** Detailed view for a recipe with action buttons. */
@@ -18,7 +18,7 @@ export default function RecipeDetail() {
       setLoading(true);
       setErr("");
       try {
-        const r = await mockAPI.recipes.getById(id);
+        const r = await api.recipes.getById(id);
         if (!r) {
           setErr("Recipe not found");
         }
@@ -61,7 +61,7 @@ export default function RecipeDetail() {
     if (!window.confirm("Delete this recipe?")) return;
     setBusy(true);
     try {
-      await mockAPI.recipes.delete(recipe.id);
+      await api.recipes.delete(recipe.id);
       nav("/");
     } catch (e) {
       alert(e?.message || "Failed to delete.");
@@ -73,10 +73,7 @@ export default function RecipeDetail() {
   async function onFavorite() {
     if (!user) return alert("Sign in required.");
     try {
-      // Use default api.recipes.toggleFavorite for mock path compatibility
-      await (api.recipes?.toggleFavorite
-        ? api.recipes.toggleFavorite(recipe.id)
-        : mockAPI.recipes.toggleFavorite(recipe.id));
+      await api.recipes.toggleFavorite(recipe.id);
       alert("Toggled favorite!");
     } catch (e) {
       alert(e?.message || "Failed to toggle favorite.");

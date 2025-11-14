@@ -1,82 +1,87 @@
-# Lightweight React Template for KAVIA
+# FlavorFolio Frontend (React)
 
-This project provides a minimal React template with a clean, modern UI and minimal dependencies.
+Modern, lightweight React frontend for the FlavorFolio recipe sharing app. This build integrates:
+- Real API calls to your backend (Express) with Authorization header from Supabase
+- Supabase authentication (email/password) with session persistence
+- Multipart form uploads for recipe image and fields
+- Ocean Professional theme via `src/theme.css`
 
-## Features
+## Requirements
 
-- **Lightweight**: No heavy UI frameworks - uses only vanilla CSS and React
-- **Modern UI**: Clean, responsive design with KAVIA brand styling
-- **Fast**: Minimal dependencies for quick loading times
-- **Simple**: Easy to understand and modify
+- Node.js 18+
+- Backend running locally at http://localhost:3001 (or set `REACT_APP_BACKEND_URL`)
+- Supabase project (optional for mock-less local dev; required for real auth)
 
-## Getting Started
+## Environment
 
-In the project directory, you can run:
+Copy `.env.example` to `.env` and set values:
 
-### `npm start`
+- REACT_APP_BACKEND_URL: http://localhost:3001
+- REACT_APP_FRONTEND_URL: http://localhost:3000
+- REACT_APP_SITE_URL: http://localhost:3000 (used by Supabase email redirect)
+- REACT_APP_SUPABASE_URL: https://<your-project>.supabase.co
+- REACT_APP_SUPABASE_KEY: <anon key> (never the service role key)
 
-Runs the app in development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Do not commit actual secrets. Use environment variables in deployment.
 
-### `npm test`
+## Running locally
 
-Launches the test runner in interactive watch mode.
+- Install dependencies: `npm install`
+- Start dev server: `npm start`
+- Open http://localhost:3000
 
-### `npm run build`
+The API client resolves base URL in this order:
+1) `REACT_APP_BACKEND_URL`
+2) `REACT_APP_API_BASE`
+3) `window.location.origin` with 3000 → 3001 fallback
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Supabase Authentication
 
-## Customization
+- Email/password Login and Signup via `src/pages/SignIn.jsx`
+- Session is tracked with `src/context/AuthContext.jsx` using `supabase.auth.onAuthStateChange`
+- Authorization header is attached automatically by `src/lib/api.js` using the Supabase access token
+- For signup, ensure `REACT_APP_SITE_URL` is set so Supabase can redirect back to `/signin` after email confirmation
 
-### Colors
+## API Contract (Backend)
 
-The main brand colors are defined as CSS variables in `src/App.css`:
+Expected endpoints (based on backend OpenAPI):
+- GET `/api/recipes`
+- GET `/api/recipes/search?q=...`
+- GET `/api/recipes/:id`
+- POST `/api/recipes` (multipart form: image optional/required per backend)
+- PATCH `/api/recipes/:id` (multipart form)
+- DELETE `/api/recipes/:id`
+- POST `/api/recipes/:id/favorite`
+- POST `/api/recipes/:id/unfavorite`
 
-```css
-:root {
-  --kavia-orange: #E87A41;
-  --kavia-dark: #1A1A1A;
-  --text-color: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --border-color: rgba(255, 255, 255, 0.1);
-}
-```
+Optional (if implemented):
+- GET `/api/users/me/recipes`
+- GET `/api/users/me/favorites`
 
-### Components
+If user endpoints are missing, the frontend falls back to client-side filtering using the recipes list.
 
-This template uses pure HTML/CSS components instead of a UI framework. You can find component styles in `src/App.css`. 
+## Pages wired to API
 
-Common components include:
-- Buttons (`.btn`, `.btn-large`)
-- Container (`.container`)
-- Navigation (`.navbar`)
-- Typography (`.title`, `.subtitle`, `.description`)
+- Home: loads list via `api.recipes.getAll()`
+- Search: searches via `api.recipes.search(q)`
+- RecipeDetail: loads by id, supports delete and favorite
+- CreateRecipe: sends FormData, includes `image` file if selected
+- EditRecipe: similar to create, multipart update
+- Profile: uses `api.auth.getCurrentUser()` and `api.users.getMyRecipes()` / `getMyFavorites()`
 
-## Learn More
+## Troubleshooting
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+- CORS errors: enable CORS on backend for http://localhost:3000
+- 400 on create/edit: ensure all fields are valid; if backend requires image, upload a file or provide `imageUrl`
+- Missing auth token: confirm Supabase env variables and that you are signed in
 
-### Code Splitting
+## Scripts
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- `npm start` - start dev server
+- `npm test` - run tests
+- `npm run build` - build for production
 
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Security notes:
+- No secrets in code. Use .env variables.
+- Tokens are not logged.
+- Inputs validated client-side; backend must enforce server-side validation.

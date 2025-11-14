@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "../lib";
+import supabase from "../lib";
 import { useAuth } from "../context/AuthContext";
 
 /**

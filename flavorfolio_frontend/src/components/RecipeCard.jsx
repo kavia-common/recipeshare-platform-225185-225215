@@ -9,6 +9,7 @@ export default function RecipeCard({ recipe }) {
   const navigate = useNavigate();
   const [faving, setFaving] = useState(false);
   const [error, setError] = useState("");
+  const [isFav, setIsFav] = useState(Boolean(recipe.isFavorite));
 
   async function onFav(e) {
     e.preventDefault();
@@ -17,9 +18,12 @@ export default function RecipeCard({ recipe }) {
     try {
       setError("");
       setFaving(true);
-      // Use mock or real API through default api export
+      // optimistic toggle
+      setIsFav((v) => !v);
       await api.recipes.toggleFavorite(recipe.id);
     } catch (e) {
+      // revert on failure
+      setIsFav(Boolean(recipe.isFavorite));
       setError(e?.message || "Failed to update favorite.");
     } finally {
       setFaving(false);
@@ -53,7 +57,7 @@ export default function RecipeCard({ recipe }) {
             disabled={faving}
             aria-live="polite"
           >
-            {faving ? "Saving..." : "Favorite"}
+            {faving ? "Saving..." : isFav ? "Unfavorite" : "Favorite"}
           </button>
           <button className="btn" onClick={onView}>
             View
