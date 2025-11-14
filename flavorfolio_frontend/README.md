@@ -10,19 +10,27 @@ Modern, lightweight React frontend for the FlavorFolio recipe sharing app. This 
 
 - Node.js 18+
 - Backend running locally at http://localhost:3001 (or set `REACT_APP_BACKEND_URL`)
-- Supabase project (optional for mock-less local dev; required for real auth)
+- Supabase project (required for real auth; optional fallback login for local demo exists)
 
-## Environment
+## Environment Setup
 
-Copy `.env.example` to `.env` and set values:
+1) Copy `.env.example` to `.env`
+2) Set the following variables (defaults shown for local dev):
 
-- REACT_APP_BACKEND_URL: http://localhost:3001
-- REACT_APP_FRONTEND_URL: http://localhost:3000
-- REACT_APP_SITE_URL: http://localhost:3000 (used by Supabase email redirect)
-- REACT_APP_SUPABASE_URL: https://<your-project>.supabase.co
-- REACT_APP_SUPABASE_KEY: <anon key> (never the service role key)
+- REACT_APP_BACKEND_URL=http://localhost:3001
+  - Express backend base URL. Must allow CORS from the frontend.
+- REACT_APP_FRONTEND_URL=http://localhost:3000
+  - Public URL for this frontend. Used for redirects and should be allowed in backend CORS.
+- REACT_APP_SITE_URL=http://localhost:3000
+  - Used by Supabase for email redirect after sign-up/confirmation. Typically same as FRONTEND_URL.
+- REACT_APP_SUPABASE_URL=https://<your-project>.supabase.co
+  - From your Supabase project settings (Project URL).
+- REACT_APP_SUPABASE_KEY=<anon-public-key>
+  - From your Supabase project settings (anon public key, NOT the service role key).
 
-Do not commit actual secrets. Use environment variables in deployment.
+Notes:
+- Do not commit actual secrets. Use environment variables in deployment platforms.
+- In production hosting, also configure these variables in the host’s environment (e.g., Vercel).
 
 ## Running locally
 
@@ -32,15 +40,31 @@ Do not commit actual secrets. Use environment variables in deployment.
 
 The API client resolves base URL in this order:
 1) `REACT_APP_BACKEND_URL`
-2) `REACT_APP_API_BASE`
+2) `REACT_APP_API_BASE` (legacy fallback)
 3) `window.location.origin` with 3000 → 3001 fallback
 
-## Supabase Authentication
+## Supabase Authentication (Sign In / Sign Up)
 
-- Email/password Login and Signup via `src/pages/SignIn.jsx`
+- Email/password login and signup via `src/pages/SignIn.jsx`
 - Session is tracked with `src/context/AuthContext.jsx` using `supabase.auth.onAuthStateChange`
 - Authorization header is attached automatically by `src/lib/api.js` using the Supabase access token
-- For signup, ensure `REACT_APP_SITE_URL` is set so Supabase can redirect back to `/signin` after email confirmation
+- For signup, ensure:
+  - `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_KEY` are set
+  - `REACT_APP_SITE_URL` is set (e.g., http://localhost:3000)
+  - In Supabase Authentication settings:
+    - Enable Email provider
+    - Add your site URL to Redirect URLs: `http://localhost:3000/signin` (and your production URL)
+- After signup, confirm email then sign in. The app will redirect back to `/signin`.
+
+## Confirm API Connectivity
+
+To verify the frontend can talk to the backend:
+- Ensure backend is running and accessible at `REACT_APP_BACKEND_URL` (default http://localhost:3001)
+- From the app (Home/Search pages), ensure lists load without errors
+- Open browser devtools Network tab and confirm requests to:
+  - GET `${REACT_APP_BACKEND_URL}/api/recipes`
+  - GET `${REACT_APP_BACKEND_URL}/api/recipes/search?q=...`
+- If you see CORS errors, update backend CORS settings to allow `REACT_APP_FRONTEND_URL` (http://localhost:3000).
 
 ## API Contract (Backend)
 
@@ -71,9 +95,15 @@ If user endpoints are missing, the frontend falls back to client-side filtering 
 
 ## Troubleshooting
 
-- CORS errors: enable CORS on backend for http://localhost:3000
-- 400 on create/edit: ensure all fields are valid; if backend requires image, upload a file or provide `imageUrl`
-- Missing auth token: confirm Supabase env variables and that you are signed in
+- CORS errors:
+  - Allow `REACT_APP_FRONTEND_URL` in backend CORS config
+  - Use full, correct protocol (http vs https) and ports
+- 400 on create/edit:
+  - Ensure all fields are valid; if backend requires image, upload a file or provide `imageUrl`
+- Missing auth token:
+  - Confirm Supabase env variables and that you are signed in
+- Wrong API base:
+  - Verify `REACT_APP_BACKEND_URL` and reload dev server if .env changed
 
 ## Scripts
 
