@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { deleteRecipe, getRecipe, toggleFavorite } from "../lib/api";
+import api, { deleteRecipe, getRecipe, toggleFavorite } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 /** Detailed view for a recipe with action buttons. */
@@ -73,7 +73,10 @@ export default function RecipeDetail() {
   async function onFavorite() {
     if (!user) return alert("Sign in required.");
     try {
-      await toggleFavorite(recipe.id, user);
+      // Use default api.recipes.toggleFavorite for mock path compatibility
+      await (api.recipes?.toggleFavorite
+        ? api.recipes.toggleFavorite(recipe.id)
+        : toggleFavorite(recipe.id, user));
       alert("Toggled favorite!");
     } catch (e) {
       alert(e?.message || "Failed to toggle favorite.");
