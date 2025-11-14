@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { z } from "zod";
-import { createRecipe } from "../lib/api";
+import api, { createRecipe, mockAPI } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -77,7 +77,9 @@ export default function CreateRecipe() {
           .filter(Boolean),
         instructions: values.instructions.trim(),
       };
-      const created = await createRecipe(payload, user);
+      const created = await (mockAPI?.recipes?.create
+        ? mockAPI.recipes.create(payload)
+        : createRecipe(payload, user));
       nav(`/recipes/${created.id}`);
     } catch (e) {
       setErr(e?.message || "Failed to create recipe.");
