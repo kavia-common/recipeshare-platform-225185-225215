@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { z } from "zod";
 import api, { createRecipe, mockAPI } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -7,16 +7,7 @@ import { useNavigate } from "react-router-dom";
 // Zod schema for client-side validation
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
-  imageUrl: z.string().min(1, "Please provide an image").refine((val) => {
-    // Allow either a data URL (from file upload) or a standard http(s) URL
-    if (val.startsWith("data:")) return true;
-    try {
-      const u = new URL(val);
-      return u.protocol === "http:" || u.protocol === "https:";
-    } catch {
-      return false;
-    }
-  }, "Please provide a valid image URL or upload a file"),
+  imageUrl: z.string().url("Please provide a valid image URL"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   ingredients: z.string().min(3, "Provide at least one ingredient"),
   instructions: z.string().min(10, "Instructions must be at least 10 characters"),
@@ -26,14 +17,11 @@ const schema = z.object({
  * Create Recipe page
  * - Validates all inputs via Zod
  * - Provides quick-fill helpers for testing
- * - Uses mock API exclusively to create a new recipe and navigates to its detail page
- * - Supports selecting an image file; shows inline preview (data URL) and prefers it over URL
+ * - Uses mock API by default to create a new recipe and navigates to its detail page
  */
 export default function CreateRecipe() {
   const { user } = useAuth();
   const nav = useNavigate();
-
-  const fileInputRef = useRef(null);
 
   const [values, setValues] = useState({
     title: "",
@@ -41,8 +29,6 @@ export default function CreateRecipe() {
     description: "",
     ingredients: "",
     instructions: "",
-    // hold the file if selected (for future backend integration)
-    imageFile: null,
   });
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
@@ -53,27 +39,10 @@ export default function CreateRecipe() {
     setValues((v) => ({ ...v, [name]: value }));
   }
 
-  /**
-   * Handle image file selection and create a preview data URL.
-   * Robust error handling with try/catch; surfaces errors via setErr.
-   */
-  function handleImageUpload(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    try {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = String(reader.result || "");
-        // Prefer preview data URL and retain the file for potential future backend usage.
-        setValues((v) => ({ ...v, imageUrl: dataUrl, imageFile: file }));
-      };
-      reader.onerror = () => {
-        setErr("Failed to read selected image. Please try another file.");
-      };
-      reader.readAsDataURL(file);
-    } catch (ex) {
-      setErr(ex?.message || "Unexpected error while reading image.");
-    }
+  // Placeholder to mimic image upload integration
+  function openCloudinaryWidget() {
+    const url = prompt("Paste image URL (Cloudinary placeholder):");
+    if (url) setValues((v) => ({ ...v, imageUrl: url }));
   }
 
   async function onSubmit(e) {
@@ -98,23 +67,19 @@ export default function CreateRecipe() {
     setBusy(true);
     setErr("");
     try {
-      // Always use mock API create to avoid any real network calls.
       const payload = {
         title: values.title.trim(),
-        imageUrl: values.imageUrl.trim(), // can be data URL from file or http(s) URL
+        imageUrl: values.imageUrl.trim(),
         description: values.description.trim(),
         ingredients: values.ingredients
           .split("\n")
           .map((s) => s.trim())
           .filter(Boolean),
         instructions: values.instructions.trim(),
-        // keep the file along with payload for potential future handling (mock ignores it)
-        imageFile: values.imageFile || null,
       };
-
-      // Force mock path regardless of default api mode
-      const created = await mockAPI.recipes.create(payload);
-
+      const created = await (mockAPI?.recipes?.create
+        ? mockAPI.recipes.create(payload)
+        : createRecipe(payload, user));
       nav(`/recipes/${created.id}`);
     } catch (e) {
       setErr(e?.message || "Failed to create recipe.");
@@ -123,7 +88,7 @@ export default function CreateRecipe() {
     }
   }
 
-  // Quick-fill presets for ease of testing (ensure imageUrl is set too)
+  // Quick-fill presets for ease of testing
   const presets = useMemo(
     () => [
       {
@@ -204,11 +169,6 @@ export default function CreateRecipe() {
     []
   );
 
-  const onPreset = (p) => {
-    // Also clear any selected file since preset uses URL
-    setValues({ ...p.data, imageFile: null });
-  };
-
   return (
     <div className="form">
       <h2>Create Recipe</h2>
@@ -218,17 +178,6 @@ export default function CreateRecipe() {
         </div>
       )}
 
-      {/* Inline image preview when imageUrl present */}
-      {values.imageUrl ? (
-        <div style={{ marginBottom: 12 }}>
-          <img
-            src={values.imageUrl}
-            alt="Selected preview"
-            style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 12, border: "1px solid #e5e7eb" }}
-          />
-        </div>
-      ) : null}
-
       <div className="field">
         <label>Quick Fill (Testing)</label>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -237,7 +186,7 @@ export default function CreateRecipe() {
               key={p.label}
               type="button"
               className="btn"
-              onClick={() => onPreset(p)}
+              onClick={() => setValues({ ...p.data })}
               aria-label={`Quick fill ${p.label}`}
             >
               {p.label}
@@ -267,50 +216,25 @@ export default function CreateRecipe() {
 
         <div className="field">
           <label htmlFor="imageUrl">Image URL</label>
-          <input
-            id="imageUrl"
-            name="imageUrl"
-            type="text"
-            value={values.imageUrl}
-            onChange={onChange}
-            aria-invalid={!!errors.imageUrl}
-            aria-describedby={errors.imageUrl ? "imageUrl-error" : undefined}
-          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              id="imageUrl"
+              name="imageUrl"
+              type="text"
+              value={values.imageUrl}
+              onChange={onChange}
+              aria-invalid={!!errors.imageUrl}
+              aria-describedby={errors.imageUrl ? "imageUrl-error" : undefined}
+            />
+            <button className="btn" onClick={openCloudinaryWidget} type="button">
+              Upload
+            </button>
+          </div>
           {errors.imageUrl && (
             <span id="imageUrl-error" className="error">
               {errors.imageUrl}
             </span>
           )}
-        </div>
-
-        <div className="field">
-          <label>Upload image</label>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              style={{ display: "none" }}
-              aria-label="Image file input"
-            />
-            <button
-              className="btn"
-              type="button"
-              onClick={() => fileInputRef.current && fileInputRef.current.click()}
-              aria-label="Choose image to upload"
-            >
-              Upload image
-            </button>
-            {values.imageFile ? (
-              <span style={{ fontSize: 12, color: "#6b7280" }} aria-live="polite">
-                Selected: {values.imageFile.name}
-              </span>
-            ) : null}
-          </div>
-          <span className="muted" style={{ fontSize: 12 }}>
-            Choose an image file or paste an Image URL above. If a file is chosen, its preview is used.
-          </span>
         </div>
 
         <div className="field">
