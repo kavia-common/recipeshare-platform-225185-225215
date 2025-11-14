@@ -1,28 +1,56 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { listRecipes } from "../lib/api";
 import RecipeCard from "../components/RecipeCard";
+import { useNavigate } from "react-router-dom";
 
 /** Home page showing hero, search, and recipes grid. */
 export default function Home() {
+  const nav = useNavigate();
   const [query, setQuery] = useState("");
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
   async function load() {
     setLoading(true);
-    const data = await listRecipes(query);
-    setRecipes(data);
-    setLoading(false);
+    setErr("");
+    try {
+      const data = await listRecipes("");
+      setRecipes(data);
+    } catch (e) {
+      setErr(e?.message || "Failed to load recipes.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
-  // simple debounced search
-  useEffect(() => {
-    const t = setTimeout(load, 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line
-  }, [query]);
+  function onSearchSubmit(e) {
+    e.preventDefault();
+    const next = query.trim();
+    if (next) nav(`/search?q=${encodeURIComponent(next)}`);
+  }
+
+  const skeletons = useMemo(() => {
+    const nodes = [];
+    for (let i = 0; i < 8; i++) {
+      nodes.push(
+        <div key={i} className="card" aria-hidden="true">
+          <div className="skeleton-img" />
+          <div className="card-body">
+            <div className="skeleton-line w-3/4" />
+            <div className="skeleton-line w-1/2" />
+            <div className="skeleton-row">
+              <div className="skeleton-btn" />
+              <div className="skeleton-btn" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return <div className="grid">{nodes}</div>;
+  }, []);
 
   const grid = useMemo(() => (
     <div className="grid">
@@ -36,7 +64,7 @@ export default function Home() {
         <div className="container">
           <h1>Discover, Share, and Savor</h1>
           <p>Ocean Professional vibes with warm amber and emerald accents.</p>
-          <div className="search-bar">
+          <form className="search-bar" onSubmit={onSearchSubmit} role="search" aria-label="Search recipes">
             <input
               type="text"
               placeholder="Search recipes (e.g., salmon, pasta, vegan)"
@@ -44,15 +72,17 @@ export default function Home() {
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search recipes"
             />
-            <button className="filter-pill">Quick</button>
-            <button className="filter-pill">Healthy</button>
-            <button className="filter-pill">Vegan</button>
-          </div>
+            <button className="filter-pill" type="submit">Search</button>
+            <button className="filter-pill" type="button" onClick={() => nav('/search?q=quick')}>Quick</button>
+            <button className="filter-pill" type="button" onClick={() => nav('/search?q=healthy')}>Healthy</button>
+            <button className="filter-pill" type="button" onClick={() => nav('/search?q=vegan')}>Vegan</button>
+          </form>
+          {err && <div className="banner-error" role="alert">{err}</div>}
         </div>
       </section>
 
       <section className="container">
-        {loading ? <p>Loading...</p> : grid}
+        {loading ? skeletons : grid}
       </section>
     </>
   );

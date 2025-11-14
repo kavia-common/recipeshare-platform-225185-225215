@@ -14,6 +14,8 @@ export default function RecipeCard({ recipe }) {
     try {
       setFaving(true);
       await toggleFavorite(recipe.id, user);
+    } catch (e) {
+      alert(e?.message || "Failed to update favorite.");
     } finally {
       setFaving(false);
     }
@@ -28,7 +30,7 @@ export default function RecipeCard({ recipe }) {
           <span>by {recipe.authorName || "Unknown"}</span>
         </div>
         <div className="card-actions">
-          <button className="btn btn-primary" onClick={onFav} disabled={faving}>
+          <button className="btn btn-primary" onClick={onFav} disabled={faving} aria-live="polite">
             {faving ? "Saving..." : "Favorite"}
           </button>
           <span className="btn">View</span>

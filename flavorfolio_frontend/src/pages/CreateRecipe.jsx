@@ -25,6 +25,7 @@ export default function CreateRecipe() {
   });
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   function onChange(e) {
     setValues(v => ({ ...v, [e.target.name]: e.target.value }));
@@ -48,6 +49,7 @@ export default function CreateRecipe() {
     if (!user) return alert("Please sign in.");
 
     setBusy(true);
+    setErr("");
     try {
       const payload = {
         title: values.title.trim(),
@@ -58,6 +60,8 @@ export default function CreateRecipe() {
       };
       const r = await createRecipe(payload, user);
       nav(`/recipes/${r.id}`);
+    } catch (e) {
+      setErr(e?.message || "Failed to create recipe.");
     } finally {
       setBusy(false);
     }
@@ -66,6 +70,7 @@ export default function CreateRecipe() {
   return (
     <div className="form">
       <h2>Create Recipe</h2>
+      {err && <div className="banner-error" role="alert">{err}</div>}
 
       <div className="field">
         <label htmlFor="title">Title</label>
@@ -101,7 +106,7 @@ export default function CreateRecipe() {
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <button className="btn btn-primary" onClick={onSubmit} disabled={busy}>
+        <button className="btn btn-primary" onClick={onSubmit} disabled={busy} aria-live="polite">
           {busy ? "Creating..." : "Create"}
         </button>
       </div>

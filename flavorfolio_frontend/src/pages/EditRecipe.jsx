@@ -26,18 +26,31 @@ export default function EditRecipe() {
   });
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const r = await getRecipe(id);
-      if (!r) return;
-      setValues({
-        title: r.title || "",
-        imageUrl: r.imageUrl || "",
-        description: r.description || "",
-        ingredients: (r.ingredients || []).join("\n"),
-        instructions: r.instructions || "",
-      });
+      setLoading(true);
+      setErr("");
+      try {
+        const r = await getRecipe(id);
+        if (!r) {
+          setErr("Recipe not found.");
+        } else {
+          setValues({
+            title: r.title || "",
+            imageUrl: r.imageUrl || "",
+            description: r.description || "",
+            ingredients: (r.ingredients || []).join("\n"),
+            instructions: r.instructions || "",
+          });
+        }
+      } catch (e) {
+        setErr(e?.message || "Failed to load recipe.");
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [id]);
 
@@ -62,6 +75,7 @@ export default function EditRecipe() {
     if (!user) return alert("Please sign in.");
 
     setBusy(true);
+    setErr("");
     try {
       const payload = {
         title: values.title.trim(),
@@ -72,14 +86,27 @@ export default function EditRecipe() {
       };
       await updateRecipe(id, payload, user);
       nav(`/recipes/${id}`);
+    } catch (e) {
+      setErr(e?.message || "Failed to save changes.");
     } finally {
       setBusy(false);
     }
   }
 
+  if (loading) {
+    return (
+      <div className="form">
+        <div className="skeleton-line w-1/2" />
+        <div className="skeleton-line" />
+        <div className="skeleton-line w-3/4" />
+      </div>
+    );
+  }
+
   return (
     <div className="form">
       <h2>Edit Recipe</h2>
+      {err && <div className="banner-error" role="alert">{err}</div>}
 
       <div className="field">
         <label htmlFor="title">Title</label>
@@ -115,7 +142,7 @@ export default function EditRecipe() {
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <button className="btn btn-primary" onClick={onSubmit} disabled={busy}>
+        <button className="btn btn-primary" onClick={onSubmit} disabled={busy} aria-live="polite">
           {busy ? "Saving..." : "Save"}
         </button>
       </div>

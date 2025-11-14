@@ -1,10 +1,19 @@
-import React from "react";
-import { Link, NavLink } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-/** Navbar with brand, links, and auth buttons using Ocean Professional theme. */
+/** Navbar with brand, links, a compact search for small screens, and auth buttons. */
 export default function Navbar() {
   const { user, login, logout } = useAuth();
+  const [q, setQ] = useState("");
+  const nav = useNavigate();
+
+  function onSubmit(e) {
+    e.preventDefault();
+    const next = q.trim();
+    if (next) nav(`/search?q=${encodeURIComponent(next)}`);
+  }
+
   return (
     <nav className="navbar">
       <div className="container navbar-inner">
@@ -12,6 +21,17 @@ export default function Navbar() {
           <span className="brand-badge">FF</span>
           <span>FlavorFolio</span>
         </Link>
+
+        <form className="nav-search" onSubmit={onSubmit} role="search" aria-label="Quick search">
+          <input
+            type="text"
+            placeholder="Search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Quick search input"
+          />
+          <button type="submit" className="btn btn-primary" aria-label="Submit quick search">Go</button>
+        </form>
 
         <div className="nav-links">
           <NavLink to="/" className="btn">Home</NavLink>

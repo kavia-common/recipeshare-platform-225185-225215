@@ -8,6 +8,9 @@ import RecipeDetail from "./pages/RecipeDetail";
 import CreateRecipe from "./pages/CreateRecipe";
 import EditRecipe from "./pages/EditRecipe";
 import Profile from "./pages/Profile";
+import Search from "./pages/Search";
+import NotFound from "./pages/NotFound";
+import ErrorBoundary from "./pages/ErrorBoundary";
 import { AuthProvider } from "./context/AuthContext";
 
 /**
@@ -18,15 +21,19 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/recipes/:id" element={<RecipeDetail />} />
-            <Route path="/create" element={<CreateRecipe />} />
-            <Route path="/edit/:id" element={<EditRecipe />} />
-            <Route path="/profile" element={<Profile />} />
-          </Routes>
-        </Layout>
+        <ErrorBoundary>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/recipes/:id" element={<RecipeDetail />} />
+              <Route path="/create" element={<CreateRecipe />} />
+              <Route path="/edit/:id" element={<EditRecipe />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Layout>
+        </ErrorBoundary>
       </BrowserRouter>
     </AuthProvider>
   );

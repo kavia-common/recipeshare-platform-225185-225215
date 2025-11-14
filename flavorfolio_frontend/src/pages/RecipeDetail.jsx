@@ -10,15 +10,50 @@ export default function RecipeDetail() {
   const { user } = useAuth();
   const [recipe, setRecipe] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     (async () => {
-      const r = await getRecipe(id);
-      setRecipe(r);
+      setLoading(true);
+      setErr("");
+      try {
+        const r = await getRecipe(id);
+        if (!r) {
+          setErr("Recipe not found");
+        }
+        setRecipe(r);
+      } catch (e) {
+        setErr(e?.message || "Failed to load recipe");
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [id]);
 
-  if (!recipe) return <div className="container" style={{ padding: 24 }}>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="container" style={{ padding: 24 }}>
+        <div className="skeleton-detail">
+          <div className="skeleton-img lg" />
+          <div className="skeleton-line w-1/2" />
+          <div className="skeleton-line w-3/4" />
+          <div className="skeleton-line" />
+        </div>
+      </div>
+    );
+  }
+
+  if (err) {
+    return (
+      <div className="container" style={{ padding: 24 }}>
+        <div className="banner-error" role="alert">{err}</div>
+        <button className="btn btn-primary" onClick={() => nav(-1)} style={{ marginTop: 12 }}>
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   async function onDelete() {
     if (!user) return alert("Sign in required.");
@@ -28,6 +63,8 @@ export default function RecipeDetail() {
     try {
       await deleteRecipe(recipe.id, user);
       nav("/");
+    } catch (e) {
+      alert(e?.message || "Failed to delete.");
     } finally {
       setBusy(false);
     }
@@ -35,20 +72,24 @@ export default function RecipeDetail() {
 
   async function onFavorite() {
     if (!user) return alert("Sign in required.");
-    await toggleFavorite(recipe.id, user);
-    alert("Toggled favorite!");
+    try {
+      await toggleFavorite(recipe.id, user);
+      alert("Toggled favorite!");
+    } catch (e) {
+      alert(e?.message || "Failed to toggle favorite.");
+    }
   }
 
   return (
     <div className="container" style={{ padding: "24px 0 48px" }}>
-      <h2 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <h2 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <span>{recipe.title}</span>
         <span style={{ fontSize: 14, color: "#6b7280" }}>by {recipe.authorName || "Unknown"}</span>
       </h2>
       <div className="detail">
         <div>
           <img src={recipe.imageUrl} alt={recipe.title} />
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <div className="detail-actions">
             <button className="btn btn-primary" onClick={onFavorite}>Favorite</button>
             {user && user.id === recipe.authorId && (
               <>
