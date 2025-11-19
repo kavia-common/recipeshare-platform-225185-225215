@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
-import api from "../lib/api";
+import api, { mockAPI } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
 
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
-  imageUrl: z.string().url("Please provide a valid image URL").optional(),
+  imageUrl: z.string().url("Please provide a valid image URL"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   ingredients: z.string().min(3, "Provide at least one ingredient"),
   instructions: z.string().min(10, "Instructions must be at least 10 characters"),
@@ -23,7 +23,6 @@ export default function EditRecipe() {
     description: "",
     ingredients: "",
     instructions: "",
-    imageFile: null,
   });
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
@@ -35,7 +34,7 @@ export default function EditRecipe() {
       setLoading(true);
       setErr("");
       try {
-        const r = await api.recipes.getById(id);
+        const r = await mockAPI.recipes.getById(id);
         if (!r) {
           setErr("Recipe not found.");
         } else {
@@ -45,7 +44,6 @@ export default function EditRecipe() {
             description: r.description || "",
             ingredients: (r.ingredients || []).join("\n"),
             instructions: r.instructions || "",
-            imageFile: null,
           });
         }
       } catch (e) {
@@ -61,7 +59,7 @@ export default function EditRecipe() {
   }
 
   function openCloudinaryWidget() {
-    const url = prompt("Paste image URL:");
+    const url = prompt("Paste image URL (Cloudinary placeholder):");
     if (url) setValues(v => ({ ...v, imageUrl: url }));
   }
 
@@ -79,24 +77,17 @@ export default function EditRecipe() {
     setBusy(true);
     setErr("");
     try {
-      const fd = new FormData();
-      fd.append("title", values.title.trim());
-      fd.append("description", values.description.trim());
-      fd.append("ingredients", values.ingredients);
-      fd.append("instructions", values.instructions.trim());
-      if (values.imageFile) {
-        fd.append("image", values.imageFile);
-      } else if (values.imageUrl) {
-        fd.append("imageUrl", values.imageUrl.trim());
-      }
-      await api.recipes.update(id, fd);
+      const payload = {
+        title: values.title.trim(),
+        imageUrl: values.imageUrl.trim(),
+        description: values.description.trim(),
+        ingredients: values.ingredients.split("\n").map(s => s.trim()).filter(Boolean),
+        instructions: values.instructions.trim(),
+      };
+      await mockAPI.recipes.update(id, payload);
       nav(`/recipes/${id}`);
     } catch (e) {
-      const message =
-        e?.status === 400
-          ? "Please include a valid image file or URL and ensure all fields are filled correctly."
-          : e?.message || "Failed to save changes.";
-      setErr(message);
+      setErr(e?.message || "Failed to save changes.");
     } finally {
       setBusy(false);
     }

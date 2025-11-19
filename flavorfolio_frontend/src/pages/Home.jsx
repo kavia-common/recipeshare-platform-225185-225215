@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import api from "../lib/api";
+import { mockAPI } from "../lib/api";
 import RecipeCard from "../components/RecipeCard";
 import { useNavigate } from "react-router-dom";
 
@@ -15,9 +15,8 @@ export default function Home() {
     setLoading(true);
     setErr("");
     try {
-      const data = await api.recipes.getAll();
-      const items = Array.isArray(data) ? data : (data?.items ?? []);
-      setRecipes(items);
+      const data = await mockAPI.recipes.getAll();
+      setRecipes(data);
     } catch (e) {
       setErr(e?.message || "Failed to load recipes.");
     } finally {

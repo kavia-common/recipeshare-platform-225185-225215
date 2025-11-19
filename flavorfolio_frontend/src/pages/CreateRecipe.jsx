@@ -1,23 +1,33 @@
 import React, { useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import api from "../lib/api";
+import api, { mockAPI } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 // Zod schema for client-side validation
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
+  imageUrl: z.string().min(1, "Please provide an image").refine((val) => {
+    // Allow either a data URL (from file upload) or a standard http(s) URL
+    if (val.startsWith("data:")) return true;
+    try {
+      const u = new URL(val);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Please provide a valid image URL or upload a file"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   ingredients: z.string().min(3, "Provide at least one ingredient"),
   instructions: z.string().min(10, "Instructions must be at least 10 characters"),
-  imageUrl: z.string().optional(),
 });
 
 /**
  * Create Recipe page
- * - Validates inputs via Zod
- * - Builds FormData to support image upload and other fields
- * - Friendly error if backend requires image and it is missing
+ * - Validates all inputs via Zod
+ * - Provides quick-fill helpers for testing
+ * - Uses mock API exclusively to create a new recipe and navigates to its detail page
+ * - Supports selecting an image file; shows inline preview (data URL) and prefers it over URL
  */
 export default function CreateRecipe() {
   const { user } = useAuth();
@@ -31,6 +41,7 @@ export default function CreateRecipe() {
     description: "",
     ingredients: "",
     instructions: "",
+    // hold the file if selected (for future backend integration)
     imageFile: null,
   });
   const [errors, setErrors] = useState({});
@@ -42,6 +53,10 @@ export default function CreateRecipe() {
     setValues((v) => ({ ...v, [name]: value }));
   }
 
+  /**
+   * Handle image file selection and create a preview data URL.
+   * Robust error handling with try/catch; surfaces errors via setErr.
+   */
   function handleImageUpload(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -49,6 +64,7 @@ export default function CreateRecipe() {
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = String(reader.result || "");
+        // Prefer preview data URL and retain the file for potential future backend usage.
         setValues((v) => ({ ...v, imageUrl: dataUrl, imageFile: file }));
       };
       reader.onerror = () => {
@@ -63,6 +79,7 @@ export default function CreateRecipe() {
   async function onSubmit(e) {
     e.preventDefault();
 
+    // Validate inputs
     const parsed = schema.safeParse(values);
     if (!parsed.success) {
       const errs = {};
@@ -81,39 +98,32 @@ export default function CreateRecipe() {
     setBusy(true);
     setErr("");
     try {
-      // Build FormData
-      const fd = new FormData();
-      fd.append("title", values.title.trim());
-      fd.append("description", values.description.trim());
-      // Ingredients as newline list -> let server parse; alternatively send JSON string
-      fd.append("ingredients", values.ingredients);
-      fd.append("instructions", values.instructions.trim());
-      if (values.imageFile) {
-        fd.append("image", values.imageFile);
-      } else if (values.imageUrl) {
-        // If backend accepts imageUrl for remote fetch, include it; otherwise backend may 400.
-        fd.append("imageUrl", values.imageUrl.trim());
-      }
+      // Always use mock API create to avoid any real network calls.
+      const payload = {
+        title: values.title.trim(),
+        imageUrl: values.imageUrl.trim(), // can be data URL from file or http(s) URL
+        description: values.description.trim(),
+        ingredients: values.ingredients
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        instructions: values.instructions.trim(),
+        // keep the file along with payload for potential future handling (mock ignores it)
+        imageFile: values.imageFile || null,
+      };
 
-      const created = await api.recipes.create(fd);
-      const newId = created?.id || created?._id;
-      if (newId) {
-        nav(`/recipes/${newId}`);
-      } else {
-        // Fallback navigate to home if id missing
-        nav("/");
-      }
+      // Force mock path regardless of default api mode
+      const created = await mockAPI.recipes.create(payload);
+
+      nav(`/recipes/${created.id}`);
     } catch (e) {
-      const message =
-        e?.status === 400
-          ? "Please include a valid image file or URL and ensure all fields are filled correctly."
-          : e?.message || "Failed to create recipe.";
-      setErr(message);
+      setErr(e?.message || "Failed to create recipe.");
     } finally {
       setBusy(false);
     }
   }
 
+  // Quick-fill presets for ease of testing (ensure imageUrl is set too)
   const presets = useMemo(
     () => [
       {
@@ -195,6 +205,7 @@ export default function CreateRecipe() {
   );
 
   const onPreset = (p) => {
+    // Also clear any selected file since preset uses URL
     setValues({ ...p.data, imageFile: null });
   };
 
@@ -207,6 +218,7 @@ export default function CreateRecipe() {
         </div>
       )}
 
+      {/* Inline image preview when imageUrl present */}
       {values.imageUrl ? (
         <div style={{ marginBottom: 12 }}>
           <img

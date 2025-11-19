@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import api from "../lib/api";
+import { mockAPI } from "../lib/api";
 import RecipeCard from "../components/RecipeCard";
 
 /**
@@ -31,7 +31,7 @@ export default function Search() {
       setLoading(true);
       setErr("");
       try {
-        const data = await api.recipes.search(qParam);
+        const data = await mockAPI.recipes.search(qParam);
         setResults(Array.isArray(data) ? data : (data?.items ?? []));
       } catch (e) {
         setErr(e?.message || "Unable to search right now.");

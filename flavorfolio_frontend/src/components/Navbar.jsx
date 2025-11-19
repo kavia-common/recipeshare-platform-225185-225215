@@ -14,8 +14,6 @@ export default function Navbar() {
     if (next) nav(`/search?q=${encodeURIComponent(next)}`);
   }
 
-  const userLabel = user?.name || user?.email || "Account";
-
   return (
     <nav className="navbar">
       <div className="container navbar-inner">
@@ -45,7 +43,7 @@ export default function Navbar() {
             </button>
           ) : (
             <button onClick={logout} className="btn" aria-label="Sign out">
-              Sign out ({userLabel})
+              Sign out ({user.name})
             </button>
           )}
         </div>

@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
-import supabase from "../lib";
-import { getStoredUser, setStoredUser, hydrateCurrentUser } from "../lib/auth";
+import { supabase } from "../lib";
+import { getStoredUser, setStoredUser, getToken, setToken, hydrateCurrentUser } from "../lib/auth";
 
 /**
  * AuthContext provides authentication state and actions.
- * It listens to Supabase auth state changes and exposes user and actions.
+ * It listens to Supabase auth state changes if configured,
+ * and falls back to mock API-based auth when Supabase is not available.
  */
 const AuthContext = createContext(null);
 
@@ -21,15 +22,12 @@ export function AuthProvider({ children }) {
 
     async function init() {
       try {
-        // Prefer Supabase session
+        // Try to get Supabase session user first
         const { data: { session } = {} } = await supabase.auth.getSession();
         if (session?.user) {
           const u = {
             id: session.user.id,
-            name:
-              session.user.user_metadata?.full_name ||
-              session.user.email?.split("@")[0] ||
-              "User",
+            name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
             email: session.user.email || "",
           };
           setStoredUser(u);
@@ -37,7 +35,7 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        // Fallback: hydrate from api shim or local mock if any
+        // Fallback: hydrate from mock API/local
         const u2 = await hydrateCurrentUser(api);
         if (u2) {
           setUser(u2);
@@ -49,15 +47,12 @@ export function AuthProvider({ children }) {
 
     init();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
       if (session?.user) {
         const u = {
           id: session.user.id,
-          name:
-            session.user.user_metadata?.full_name ||
-            session.user.email?.split("@")[0] ||
-            "User",
+          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
           email: session.user.email || "",
         };
         setStoredUser(u);
@@ -70,32 +65,52 @@ export function AuthProvider({ children }) {
 
     return () => {
       active = false;
-      subscription?.subscription?.unsubscribe?.();
+      sub?.subscription?.unsubscribe?.();
     };
   }, []);
 
   async function loginWithCredentials(email, password) {
     /**
      * Attempts to log in using Supabase password auth.
-     * Fallbacks are intentionally minimal to avoid storing secrets.
+     * If Supabase fails (e.g., env not provided), falls back to mock API login.
      */
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      throw new Error(error.message || "Authentication failed");
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // user is set by onAuthStateChange
+      return { user: getStoredUser(), token: getToken() };
+    } catch {
+      // fallback to mock api
+      try {
+        const res = await api.auth.login(email, password);
+        const token = res?.token;
+        const u = res?.user || null;
+        if (!token || !u) throw new Error("Invalid login response");
+        setToken(token);
+        setStoredUser(u);
+        setUser(u);
+        return { user: u, token };
+      } catch {
+        throw new Error("Invalid email or password");
+      }
     }
-    // user is set by onAuthStateChange
-    return { user: getStoredUser() };
   }
 
   function logout() {
     /**
-     * Sign out from Supabase and clear local state.
+     * Sign out from Supabase if active, else clear mock session.
      */
     try {
       supabase.auth.signOut().catch(() => {});
     } catch {
-      /* ignore */
+      // ignore
+    }
+    try {
+      if (api?.auth?.logout) {
+        api.auth.logout().catch(() => {});
+      }
     } finally {
+      setToken(null);
       setStoredUser(null);
       setUser(null);
     }

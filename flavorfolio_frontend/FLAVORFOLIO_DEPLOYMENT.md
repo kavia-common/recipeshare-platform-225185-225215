@@ -29,13 +29,11 @@ Prereqs
 4) Environment variables (Vercel Project Settings -> Environment Variables)
 For frontend (React CRA):
 - REACT_APP_BACKEND_URL = https://your-backend-host
-- REACT_APP_FRONTEND_URL = https://your-frontend-url
-- REACT_APP_SITE_URL = https://your-frontend-url  (used by Supabase email redirects)
-- REACT_APP_SUPABASE_URL = https://<your-project>.supabase.co
-- REACT_APP_SUPABASE_KEY = <anon public key>
-
-Optional third-party:
-- REACT_APP_CLOUDINARY_CLOUD_NAME
+- REACT_APP_SITE_URL = https://your-frontend-url  (used by auth/email redirects)
+- Optional third-party:
+  - REACT_APP_CLOUDINARY_CLOUD_NAME
+  - REACT_APP_SUPABASE_URL
+  - REACT_APP_SUPABASE_ANON_KEY
 
 For backend (documented in backend project):
 - DATABASE_URL = <from Neon or your DB provider>

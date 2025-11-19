@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import api from "../lib/api";
+import api, { mockAPI } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 /** Detailed view for a recipe with action buttons. */
@@ -18,7 +18,7 @@ export default function RecipeDetail() {
       setLoading(true);
       setErr("");
       try {
-        const r = await api.recipes.getById(id);
+        const r = await mockAPI.recipes.getById(id);
         if (!r) {
           setErr("Recipe not found");
         }
@@ -61,7 +61,7 @@ export default function RecipeDetail() {
     if (!window.confirm("Delete this recipe?")) return;
     setBusy(true);
     try {
-      await api.recipes.delete(recipe.id);
+      await mockAPI.recipes.delete(recipe.id);
       nav("/");
     } catch (e) {
       alert(e?.message || "Failed to delete.");
@@ -73,7 +73,10 @@ export default function RecipeDetail() {
   async function onFavorite() {
     if (!user) return alert("Sign in required.");
     try {
-      await api.recipes.toggleFavorite(recipe.id);
+      // Use default api.recipes.toggleFavorite for mock path compatibility
+      await (api.recipes?.toggleFavorite
+        ? api.recipes.toggleFavorite(recipe.id)
+        : mockAPI.recipes.toggleFavorite(recipe.id));
       alert("Toggled favorite!");
     } catch (e) {
       alert(e?.message || "Failed to toggle favorite.");
@@ -84,7 +87,7 @@ export default function RecipeDetail() {
     <div className="container" style={{ padding: "24px 0 48px" }}>
       <h2 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <span>{recipe.title}</span>
-        <span style={{ fontSize: 14, color: "#6b7280" }}>by {recipe.authorName || recipe.author?.name || "Unknown"}</span>
+        <span style={{ fontSize: 14, color: "#6b7280" }}>by {recipe.authorName || "Unknown"}</span>
       </h2>
       <div className="detail">
         <div>
